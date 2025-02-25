@@ -1,7 +1,286 @@
 ---
-title: "wdi-2022"
+title: "World Development Indicators Report 2022"
+author: "Yejin Choi"
+date: "2025-02-25"
+format:
+  html: default
+  pdf:
+    fig-pos: "H"
+editor:
+  render-on-save: true
+bibliography: references.bib
 ---
 
-## Quarto
 
-Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+```{python}
+#| echo: False
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+
+from scipy.stats import ttest_ind
+import statsmodels.api as sm
+
+# Load the wdi dataset
+wdi_df = pd.read_csv("../wdi.csv")
+
+# Summary of the dataset
+# wdi_df.info()
+
+# Check for missing values
+# wdi_df.isnull().sum()
+```
+
+This report analyzes key World Development Indicators (WDI) from 2022 to assess relationships between economic, education, and health variables.
+
+
+# Exploratory Data Analysis
+
+## Correlation Matrix
+
+To identify meaningful relationships among key indicators, a correlation matrix is created.
+
+```{python}
+#| echo: False
+#| label: fig-corr-matrix
+#| fig-cap: "Heatmap showing the correlation matrix of World Development Indicators in 2022 [@wdi2022]."
+
+# Drop country column and create correlation matrix
+corr_matrix = wdi_df.drop(columns=['country'], errors='ignore').corr()
+
+# Plot correlation matrix
+plt.figure(figsize=(10,8))
+sns.heatmap(corr_matrix, annot=True, cmap="coolwarm", fmt=".2f", linewidths=0.5)
+plt.title("Correlation Matrix of WDI Indicators")
+plt.show()
+```
+
+- Life expectancy and adult literacy rate have a **strong positive correlation** of **0.69**.
+- Life expectancy and GDP per capita also have a **strong positive correlation** of **0.64**.
+- Life expectancy and measles immunization rate show a **moderate positive correlation** of **0.56**.
+
+As shown in @fig-corr-matrix, the correlation matrix suggests that higher GDP per capita, literacy rate, and immunization rate are linked to higher life expectancy.
+
+## Summary Statistics
+
+To better understand the distribution of key indicators, summary statistics are computed.
+
+### Summary Statistics
+
+| Statistic | Life Expectancy | GDP per Capita | Adult Literacy Rate | Measles Immunization Rate |
+|-----------|---------------:|--------------:|--------------------:|------------------------:|
+| **Count** | 209.000000         | 207.000000        | 54.000000              | 193.000000               |
+| **Mean**  | 72.416519         | 20520.336828     | 80.971722             | 84.103627                 |
+| **Std Dev** | 7.713322        | 30640.741594     | 18.430839             | 15.413050                 |
+| **Min**   | 52.997000        | 250.634225       | 27.280001             | 33.000000                 |
+| **25%**   | 66.782000        | 2599.752468      | 74.760000             | 76.000000                 |
+| **50% (Median)** | 73.514634  | 7606.237525      | 85.452465             | 90.000000                 |
+| **75%**   | 78.475000        | 27542.145523     | 95.875000             | 96.000000                 |
+| **Max**   | 85.377000        | 226052.001905    | 100.000000            | 99.000000                 |
+
+: Summary of Key Descriptive Statistics for Selected Indicators {#tbl-summary-stats}
+
+@tbl-summary-stats provides an overview of key descriptive statistics for selected indicators.
+
+- Life expectancy ranges from **52.99 to 85.38** years with a **mean of 72.42** years.
+- GDP per capita varies widely, with values ranging from **$250.63 to $226,052**, suggesting global economic disparities.
+- Adult literacy rate remains high, with a **median of 85.45%**, but some countries report much lower rates, reaching as low as 27.28%
+- Measles immunization rate varies widely, with some countries reporting as low as **33%**, which may increase the risk of outbreaks.
+
+
+## Key Indicator Visualizations
+
+### Life Expectancy Distribution
+```{python}
+#| label: fig-life-exp
+#| echo: False
+#| fig-cap: "Histogram showing the distribution of life expectancy across countries in 2022 [@wdi2022]."
+
+plt.figure(figsize=(8,5))
+sns.histplot(wdi_df["life_expectancy"], bins=30, kde=True)
+plt.xlabel("Life Expectancy (years)")
+plt.ylabel("Count")
+plt.title("Distribution of Life Expectancy in 2022")
+plt.show()
+```
+
+- Most countries have a life expectancy between 67 and 82 years.
+- The distribution is **slightly left-skewed**, suggesting that a few countries have significantly lower life expectancy, which could be due to socio-economic instability and lack of healthcare [@Mondal2013].
+
+### 10 Countries with the Lowest Measles Immunization Rates
+```{python}
+#| label: fig-low-measles
+#| echo: False
+#| fig-cap: "Bar chart showing the 10 countries with the lowest measles immunization rates in 2022 [@wdi2022]."
+
+# Drop missing values and select the bottom 10
+least_immunized_countries = wdi_df.dropna(subset=["measles_immunisation_rate"]).nsmallest(10, "measles_immunisation_rate")
+
+plt.figure(figsize=(10,5))
+sns.barplot(x="measles_immunisation_rate", y="country",
+            data=least_immunized_countries,
+            hue="country", 
+            palette="Blues", 
+            legend=False)
+
+plt.xlabel("Measles Immunisation Rate (%)")
+plt.ylabel("Country")
+plt.title("10 Countries with Lowest Measles Immunisation Rate (2022)")
+plt.xlim(0, 100)
+plt.show()
+```
+
+The 10 countries with the lowest measles immunization rates have immunization levels **below 55 percent**, making them more vulnerable to measles outbreaks and other associated health risks.
+
+### GDP per Capita vs. Life Expectancy and Adult Literacy Rate
+```{python}
+#| label: fig-gdp-life-literacy
+#| echo: False
+#| layout-ncol: 2
+#| fig-cap: "Scatterplots showing the relationship between GDP per capita and key indicators in 2022 [@wdi2022]."
+#| fig-subcap: ["GDP per Capita vs. Life Expectancy", "GDP per Capita vs. Adult Literacy Rate"]
+
+plt.figure(figsize=(8,5))
+sns.scatterplot(x=wdi_df["gdp_per_capita"], y=wdi_df["life_expectancy"], alpha=0.6)
+
+plt.xlabel("GDP per Capita (USD)")
+plt.ylabel("Life Expectancy (years)")
+plt.title("GDP per Capita vs. Life Expectancy (2022)")
+plt.xscale("log")  # Log scale for compact data points
+plt.show()
+
+plt.figure(figsize=(8,5))
+sns.scatterplot(x=wdi_df["gdp_per_capita"], y=wdi_df["adult_literacy_rate"], alpha=0.6)
+
+plt.xlabel("GDP per Capita (USD)")
+plt.ylabel("Adult Literacy Rate (%)")
+plt.title("GDP per Capita vs. Adult Literacy Rate (2022)")
+plt.ylim(0, 110)  # Literacy rate is between 0-100%
+plt.xscale("log")  # Log scale for compact data points
+plt.show()
+```
+
+There is a clear positive relationship between GDP per capita and **both life expectancy and literacy rate**. Countries with higher GDP per capita generally have longer life expectancy and higher literacy rates. However, some low-GDP countries still achieve high literacy.
+
+## Hypothesis Testing
+
+To determine whether differences in GDP per capita, literacy rate, and immunization rate significantly impact life expectancy, T-tests are performed.
+
+### Life Expectancy and GDP per capita
+```{python}
+# Remove NaN values before calculating median
+df_ttest = wdi_df.dropna(subset=["gdp_per_capita"
+                                  , "life_expectancy"])
+
+# Split dataset into High and Low GDP groups based on median GDP
+median_gdp = df_ttest["gdp_per_capita"].median()
+high_gdp = df_ttest[df_ttest["gdp_per_capita"] >= median_gdp][
+    "life_expectancy"]
+low_gdp = df_ttest[df_ttest["gdp_per_capita"] < median_gdp][
+    "life_expectancy"]
+
+# Run T-test
+t_stat, p_value = ttest_ind(high_gdp, low_gdp, equal_var=False)
+
+print(f"T-statistic: {t_stat:.3f}, P-value: {p_value:.5f}")
+```
+
+- The p-value is < 0.001, so the null hypothesis is rejected.
+- There is a **statistically significant difference** in life expectancy between high-GDP and low-GDP countries.
+
+### Life Expectancy and Adult Literacy Rate
+```{python}
+# Remove NaN values before calculating median
+df_ttest = wdi_df.dropna(subset=["adult_literacy_rate"
+                                  , "life_expectancy"])
+
+# Split dataset into High and Low adult literacy rate groups based on median rate
+median_alr = df_ttest["adult_literacy_rate"].median()
+high_alr = df_ttest[df_ttest["adult_literacy_rate"] >= median_alr][
+    "life_expectancy"]
+low_alr = df_ttest[df_ttest["adult_literacy_rate"] < median_alr][
+    "life_expectancy"]
+
+# Run T-test
+t_stat, p_value = ttest_ind(high_alr, low_alr, equal_var=False)
+
+print(f"T-statistic: {t_stat:.3f}, P-value: {p_value:.5f}")
+```
+
+- The p-value is < 0.001, so the null hypothesis is rejected.
+- There is a **statistically significant difference** in life expectancy between high-literacy and low-literacy countries.
+
+### Life Expectancy and Measles Immunization Rate
+```{python}
+# Remove NaN values before calculating median
+df_ttest = wdi_df.dropna(subset=["measles_immunisation_rate"
+                                  , "life_expectancy"])
+
+# Split dataset into High and Low measles immunization rate groups
+# based on median rate
+median_mir = df_ttest["measles_immunisation_rate"].median()
+high_mir = df_ttest[df_ttest["measles_immunisation_rate"] >= median_mir][
+    "life_expectancy"]
+low_mir = df_ttest[df_ttest["measles_immunisation_rate"] < median_mir][
+    "life_expectancy"]
+
+# Run T-test
+t_stat, p_value = ttest_ind(high_mir, low_mir, equal_var=False)
+
+print(f"T-statistic: {t_stat:.3f}, P-value: {p_value:.5f}")
+```
+
+- The p-value is < 0.001, so the null hypothesis is rejected.
+- There is a **statistically significant difference** in life expectancy between countries with high and low measles immunization rates.
+
+### Summary of T-test Findings
+
+| Indicator Compared              | T-Statistic | P-Value | Conclusion                               |
+|---------------------------------|------------|---------|-------------------------------------------|
+| High vs. Low GDP per Capita     | 13.643     | <0.001  | Significant difference in life expectancy |
+| High vs. Low Adult Literacy Rate | 6.105      | <0.001  | Significant difference in life expectancy |
+| High vs. Low Measles Immunization Rate | 7.953  | <0.001  | Significant difference in life expectancy |
+
+: Summary of T-test Findings {#tbl-ttest-results}
+
+As seen in @tbl-ttest-results, the T-test results confirm that GDP per capita, literacy rate, and measles immunization rate are all significantly associated with life expectancy.
+
+## Regression Analysis
+
+A multiple linear regression model is used to examine the relationship between GDP per capita, adult literacy rate, and measles immunization rate with life expectancy.
+
+### Predicting Life Expectancy
+```{python}
+# Drop rows with NaN values
+df_ols = wdi_df.dropna(subset=["gdp_per_capita"
+                                , "adult_literacy_rate"
+                                , "measles_immunisation_rate"
+                                , "life_expectancy"])
+
+# Define dependent and independent variables
+X = df_ols[["gdp_per_capita"
+            , "adult_literacy_rate"
+            , "measles_immunisation_rate"]]
+X = sm.add_constant(X)  # Add intercept
+y = df_ols["life_expectancy"]
+
+# Fit regression model
+model = sm.OLS(y, X).fit()
+
+# Display model summary
+model.summary()
+```
+
+The regression model provides insights into the predictors of life expectancy. The model explains approximately **58.7 percent of the variability** in life expectancy.
+
+All GDP per capita, adult literacy rate, and measles immunization rate are statistically significant predictors of life expectancy, with **p-values less than 0.05**.
+
+The coefficients of the model suggest that:
+
+- A one-unit increase in GDP per capita is associated with a 0.0002 increase in life expectancy, controlling for other variables.
+- A one-percentage point increase in the adult literacy rate is associated with a 0.1907 increase in life expectancy.
+- A one-percentage point increase in the measles immunization rate is associated with a 0.1013 increase in life expectancy.
+
+The exploratory data analysis highlights that **GDP per capita, adult literacy rate, and measles immunization rate are associated with life expectancy**, but this does not imply a direct cause-and-effect relationship.
