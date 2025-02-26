@@ -106,7 +106,7 @@ plt.title("Distribution of Life Expectancy in 2022")
 plt.show()
 ```
 
-- Most countries have a life expectancy between 67 and 82 years.
+- Most countries have a life expectancy between **67 and 82 years**.
 - The distribution is **slightly left-skewed**, suggesting that a few countries have significantly lower life expectancy, which could be due to socio-economic instability and lack of healthcare [@Mondal2013].
 
 ### 10 Countries with the Lowest Measles Immunization Rates
@@ -127,19 +127,19 @@ sns.barplot(x="measles_immunisation_rate", y="country",
 
 plt.xlabel("Measles Immunisation Rate (%)")
 plt.ylabel("Country")
-plt.title("10 Countries with Lowest Measles Immunisation Rate (2022)")
+plt.title("10 Countries with Lowest Measles Immunisation Rates (2022)")
 plt.xlim(0, 100)
 plt.show()
 ```
 
-The 10 countries with the lowest measles immunization rates have immunization levels **below 55 percent**, making them more vulnerable to measles outbreaks and other associated health risks.
+The 10 countries with the lowest measles immunization rates have immunization levels **below 55%**, making them more vulnerable to measles outbreaks and other associated health risks.
 
 ### GDP per Capita vs. Life Expectancy and Adult Literacy Rate
 ```{python}
 #| label: fig-gdp-life-literacy
 #| echo: False
 #| layout-ncol: 2
-#| fig-cap: "Scatterplots showing the relationship between GDP per capita and key indicators in 2022 [@wdi2022]."
+#| fig-cap: "Scatterplots showing the relationship between GDP per Capita and key indicators in 2022 [@wdi2022]."
 #| fig-subcap: ["GDP per Capita vs. Life Expectancy", "GDP per Capita vs. Adult Literacy Rate"]
 
 plt.figure(figsize=(8,5))
@@ -245,7 +245,7 @@ print(f"T-statistic: {t_stat:.3f}, P-value: {p_value:.5f}")
 
 : Summary of T-test Findings {#tbl-ttest-results}
 
-As seen in @tbl-ttest-results, the T-test results confirm that GDP per capita, literacy rate, and measles immunization rate are all significantly associated with life expectancy.
+As shown in @tbl-ttest-results, the T-test results confirm that GDP per capita, literacy rate, and measles immunization rate are all statistically significantly associated with life expectancy.
 
 ## Regression Analysis
 
